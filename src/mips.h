@@ -134,6 +134,18 @@ void storememw(unsigned char *mem, int address, int value)
     mem[address] = (value << 8) & 0xff;
 }
 
+void interrupt_handler(MIPS_state *state, int interrupt)
+{
+    if (interrupt > 8 || interrupt < 1)
+        return;
+    if (interrupt == 8)
+        state->cp0regs[12] |= 1 << (interrupt + 7);   
+    state->cp0regs[13] |= 1 << (interrupt + 7);
+    // will be moved to interrupt handler function
+    state->cp0regs[14] = state->pc;
+    state->pc = 0x80000180;
+}
+
 int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, unsigned int count)
 {
     J_FMT jfmt = decodeJ(instruction);
@@ -420,11 +432,7 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
     if (state->cp0regs[9] == state->cp0regs[11])
     {
         // if timer count == timer compare then interrupt
-        state->cp0regs[12] |= 1 << 14;
-        state->cp0regs[13] |= 1 << 14;
-        // will be moved to interrupt handler function
-        state->cp0regs[14] = state->pc;
-        state->pc = 0x1000;
+        interrupt_handler(state, 8);
     }
 
     state->regs[0] = 0;

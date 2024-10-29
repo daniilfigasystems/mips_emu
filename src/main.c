@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
     int size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    mem = (unsigned char *)malloc(1 << 24);
+    mem = (unsigned char *)malloc((1 << 30) + (1 << 25)); // 2048MB rom + 64 mb ram
 
     if (mem == NULL)
     {
