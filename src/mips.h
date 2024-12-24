@@ -188,20 +188,27 @@ void storememw(unsigned char *mem, unsigned int address, unsigned int value)
     mem[address] = (value << 8) & 0xff;
 }
 
-void interrupt_handler(MIPS_state *state, int interrupt)
+void interrupt_handler(MIPS_state *state, int interrupt, int exception)
 {
     if (state->interrupts[interrupt - 1] == 0xff)
         return;
 
     state->interrupts[interrupt - 1] = 1;
 
-    if (interrupt > 8 || interrupt < 1)
+    if ((interrupt > 8 || interrupt < 1) && exception == 0)
         return;
     /* timer parsing */
     if (interrupt == 8)
         state->cp0regs[12] |= 1 << (interrupt + 7);  
- 
-    state->cp0regs[13] |= 1 << (interrupt + 7);
+
+    if (exception == 0)
+        state->cp0regs[13] |= 1 << (interrupt + 7);
+    else
+    {
+        /* clear previous exception */
+        state->cp0regs[14] &= 31 << 1;
+        state->cp0regs[13] |= (exception & 0x5) << 1;
+    }
 
     state->cp0regs[14] = state->pc;
     state->pc = 0x10000180;
@@ -316,7 +323,7 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
                 case 0x20: /* add (R) */
                     if ((state->regs[fmt.rs] > 0 && state->regs[fmt.rt] > 0 && (state->regs[fmt.rs] + state->regs[fmt.rt]) < 0) || 
                     (state->regs[fmt.rs] < 0 && state->regs[fmt.rt] < 0 && (state->regs[fmt.rs] + state->regs[fmt.rt]) > 0))
-                        state->exception = 1;
+                        state->exception = 12;
                     state->regs[fmt.rd] = state->regs[fmt.rs] + state->regs[fmt.rt];
                 break;
                 case 0x21: /* addu (R) */
@@ -325,7 +332,7 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
                 case 0x22: /* sub (R) */
                     if ((state->regs[fmt.rs] > 0 && state->regs[fmt.rt] < 0 && (state->regs[fmt.rs] + state->regs[fmt.rt]) < 0) || 
                     (state->regs[fmt.rs] < 0 && state->regs[fmt.rt] > 0 && (state->regs[fmt.rs] + state->regs[fmt.rt]) > 0))
-                        state->exception = 1;
+                        state->exception = 12;
                     state->regs[fmt.rd] = state->regs[fmt.rs] - state->regs[fmt.rt];
                 break;
                 case 0x23: /* subu (R) */
@@ -367,11 +374,11 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
                 break;
                 case 0x34: /* teq (R) */
                     if (state->regs[fmt.rs] == state->regs[fmt.rt])
-                        state->exception = 1;
+                        state->exception = 12;
                 break;
                 case 0x36: /* tne (R) */
                     if (state->regs[fmt.rs] != state->regs[fmt.rt])
-                        state->exception = 1;
+                        state->exception = 12;
                 break;
             }
         break;
@@ -501,10 +508,15 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
     if (state->cp0regs[9] == state->cp0regs[11])
     {
         /* if timer count == timer compare then interrupt */
-        interrupt_handler(state, 8);
+        interrupt_handler(state, 8, 0);
     }
 
-    /* Check for wri */
+    /* Check for exceptions */
+    if (state->exception != 0)
+    {
+        /* exception occured */
+        interrupt_handler(state, 0, state->exception);
+    }
 
     state->regs[0] = 0;
 
