@@ -12,4 +12,4 @@ MIPS I/II (some instructions from MIPS II) <br />
 Basic UART 8550 <br />
 Portable header only C code <br />
 
-### Any contributions for improving emulator allowed!
+### Feel free to contribute!
