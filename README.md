@@ -1,4 +1,5 @@
 # mips_emu
+mips_emu is emulator of MIPS I/II instruction set created from scratch using C language.
 
 # Why i decided to make MIPS emulator from scratch
 I didn't found mips emulator that can almost fully emulate interrupts and portable. So i decided to make own MIPS emulator.
