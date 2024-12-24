@@ -2,6 +2,12 @@
 #include <stdlib.h>
 #include <signal.h> // POSIX only!
 #include <sys/time.h> // Linux only!
+
+unsigned int ldmem(size_t size, unsigned char *m, unsigned int a);
+void stmem(size_t size, unsigned char *m, unsigned int a, unsigned int d);
+
+#define LDMEM(r, s, m, a) r = ldmem(s, m, a)
+#define STMEM(s, m, a, d) stmem(s, m, a, d)
 #define CPRINT(c) printf("%c", c)
 #define SPRINT(s) {int i=0; while (mem[i+s]!='\0') {printf("%c", mem[i+s]); i++;}}
 // #define SPRINT(s) printf("%x", s)
@@ -15,7 +21,7 @@ MIPS_state state;
 unsigned char *mem;
 
 const char regname[33][5] = {"pc", "zero", "at", "v0", "v1", "a0", "a1", "a2", "a3", "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "t8", "t9", "k0", "k1", "gp", "sp", "fp", "ra"};
-const char cp0regname[32][10] = {"cp0", "cp1", "cp2", "cp3", "cp4", "cp5", "cp6", "cp7", "cp8", "count", "cp11", "compare", "status", "cause", "epc", "cp15", "cp16", "cp17", "cp18", "cp19", "cp20", "cp21", "cp22", "cp23", "cp24", "cp25", "cp26", "cp27", "cp28", "cp29", "cp30", "cp31"};
+const char cp0regname[32][10] = {"cp0", "cp1", "cp2", "cp3", "cp4", "cp5", "cp6", "cp7", "cp8", "count", "cp10", "compare", "status", "cause", "epc", "cp15", "cp16", "cp17", "cp18", "cp19", "cp20", "cp21", "cp22", "cp23", "cp24", "cp25", "cp26", "cp27", "cp28", "cp29", "cp30", "cp31"};
 
 void hexDump(char *desc, void *addr, int len) 
 {
@@ -76,7 +82,7 @@ void print_state()
         printf("$%s: %u|0x%x\n", cp0regname[i], state.cp0regs[i], state.cp0regs[i]);
     
     printf("\n--------MEMORY--------\n");
-    hexDump((char *)"FIRST KILOBYTE", mem, 0x400);
+    hexDump((char *)"FIRST KILOBYTE", mem + 0x20000000, 0x400);
 }
 
 void exit_handler(int sig)
@@ -107,7 +113,7 @@ int main(int argc, char *argv[])
     int size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    mem = (unsigned char *)malloc((1 << 30) + (1 << 25)); // 2048MB rom + 64 mb ram
+    mem = (unsigned char *)malloc(0x40000000); // 512MB rom + 512MB ram
 
     if (mem == NULL)
     {
@@ -138,12 +144,15 @@ int main(int argc, char *argv[])
 
     count = tv.tv_usec / 1000;
 
-    for (int i = 0; i < 1 << 24; i++)
+    for (int i = 0; i < 0x40000000; i++)
     {
         instruction = loadmemw(mem, state.pc);
 
         if (execute(&state, instruction, mem, count) == 5)
             break;
+
+        // synchronize timer
+        count = tv.tv_usec / 1000;
         // printf("%x\n", instruction);
         // printf("$%x: %x%x%x%x\n", state.pc, mem[state.pc], mem[state.pc + 1], mem[state.pc + 2], mem[state.pc + 3]);
         // printf("%x\n", execute(&state, instruction, mem));
@@ -154,4 +163,17 @@ int main(int argc, char *argv[])
     free(mem);
 
     return 0;
+}
+
+unsigned int ldmem(size_t size, unsigned char *m, unsigned int a)
+{
+    if (a == 0x1000000)
+        return getchar();
+    return 0;
+}
+
+void stmem(size_t size, unsigned char *m, unsigned int a, unsigned int d)
+{
+    if (a == 0x1000000)
+        printf("%c", (char)d);
 }

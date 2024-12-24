@@ -1,1 +1,5 @@
 bin/
+*.out
+memory.bin
+**/.vscode/
+buildroot-2024.02.5/

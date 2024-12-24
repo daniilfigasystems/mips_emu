@@ -3,6 +3,16 @@
 #ifndef MIPS_EMU
 #define MIPS_EMU
 
+/* @note All instructions are 32 bits wide.
+    Typical memory size is 1 << 29 (512MB).
+*/
+
+#ifndef LDMEM
+#define LDMEM(r, s, m, a)
+#endif
+#ifndef STMEM
+#define STMEM(s, m, a, d)
+#endif
 #ifndef IPRINT
 #define IPRINT(i)
 #endif
@@ -17,6 +27,9 @@
 #endif
 #ifndef CPRINT
 #define CPRINT(c)
+#endif
+#ifndef CUSTOMIOMEM
+#define CUSTOMIOMEM
 #endif
 
 typedef struct _R_FMT
@@ -49,7 +62,7 @@ typedef struct _MIPS_state
     unsigned int hi, lo;
     unsigned int regs[32];
     unsigned int cp0regs[32];
-    char interrupts[8];
+    unsigned char interrupts[8];
     int exception;
     char mode;
 } MIPS_state;
@@ -84,50 +97,91 @@ J_FMT decodeJ(unsigned int instruction)
     return fmt;
 }
 
-unsigned char loadmembu(unsigned char *mem, int address)
+unsigned char loadmembu(unsigned char *mem, unsigned int address)
 {
-    return mem[address];
+    unsigned char retval = 0;
+    if (address > 0x3e000000)
+    {
+        LDMEM(retval, sizeof(unsigned char), mem, address);
+        return retval;
+    }
+    else
+        return mem[address];
 }
 
-char loadmemb(unsigned char *mem, int address)
+char loadmemb(unsigned char *mem, unsigned int address)
 {
-    return mem[address];
+    char retval = 0;
+    if (address > 0x3e000000)
+    {
+        LDMEM(retval, sizeof(char), mem, address);
+        return retval;
+    }
+    else
+        return mem[address];
 }
 
-unsigned short loadmemh(unsigned char *mem, int address)
+unsigned short loadmemh(unsigned char *mem, unsigned int address)
 {
-    return (mem[address + 1] & 0xff) |
-           ((mem[address]) & 0xff) << 8;
+    short retval = 0;
+    if (address > 0x3e000000)
+    {
+        LDMEM(retval, sizeof(short), mem, address);
+        return retval;
+    }
+    else
+        return (mem[address + 1] & 0xff) |
+            ((mem[address]) & 0xff) << 8;
 }
 
-unsigned short loadmemhu(unsigned char *mem, int address)
+unsigned short loadmemhu(unsigned char *mem, unsigned int address)
 {
-    return (mem[address + 1] & 0xff) |
-           ((mem[address]) & 0xff) << 8;
+    unsigned short retval = 0;
+    if (address > 0x3e000000)
+    {
+        LDMEM(retval, sizeof(unsigned short), mem, address);
+        return retval;
+    }
+    else
+        return (mem[address + 1] & 0xff) |
+            ((mem[address]) & 0xff) << 8;
 }
 
-int loadmemw(unsigned char *mem, int address)
+int loadmemw(unsigned char *mem, unsigned int address)
 {
-    return (mem[address + 3] & 0xff) |
-            (mem[address + 2] & 0xff) << 8 |
-            (mem[address + 1] & 0xff) << 16 |
-            (mem[address] & 0xff) << 24;
+    int retval = 0;
+    if (address > 0x3e000000)
+    {
+        LDMEM(retval, sizeof(int), mem, address);
+        return retval;
+    }
+    else
+        return (mem[address + 3] & 0xff) |
+                (mem[address + 2] & 0xff) << 8 |
+                (mem[address + 1] & 0xff) << 16 |
+                (mem[address] & 0xff) << 24;
 }
 
-void storememb(unsigned char *mem, int address, char value)
+void storememb(unsigned char *mem, unsigned int address, unsigned char value)
 {
+    if (address > 0x3e000000)
+        STMEM(sizeof(char), mem, address, value);
     mem[address] = value;
 }
 
-void storememh(unsigned char *mem, int address, int value)
+void storememh(unsigned char *mem, unsigned int address, unsigned int value)
 {
+    if (address > 0x3e000000)
+        STMEM(sizeof(short), mem, address, value);
     mem[address + 1] = value & 0xff;
     mem[address] = (value << 8) & 0xff;
 }
 
 
-void storememw(unsigned char *mem, int address, int value)
+void storememw(unsigned char *mem, unsigned int address, unsigned int value)
 {
+    if (address > 0x3e000000)
+        STMEM(sizeof(int), mem, address, value);
     mem[address + 3] = value & 0xff;
     mem[address + 2] = (value << 8) & 0xff;
     mem[address + 1] = (value << 16) & 0xff;
@@ -136,14 +190,21 @@ void storememw(unsigned char *mem, int address, int value)
 
 void interrupt_handler(MIPS_state *state, int interrupt)
 {
+    if (state->interrupts[interrupt - 1] == 0xff)
+        return;
+
+    state->interrupts[interrupt - 1] = 1;
+
     if (interrupt > 8 || interrupt < 1)
         return;
+    // timer parsing
     if (interrupt == 8)
-        state->cp0regs[12] |= 1 << (interrupt + 7);   
+        state->cp0regs[12] |= 1 << (interrupt + 7);  
+ 
     state->cp0regs[13] |= 1 << (interrupt + 7);
-    // will be moved to interrupt handler function
+
     state->cp0regs[14] = state->pc;
-    state->pc = 0x80000180;
+    state->pc = 0x10000180;
 }
 
 int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, unsigned int count)
@@ -223,6 +284,7 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
                             CPRINT(state->regs[4]);
                         break;
                     }
+                    state->pc = 0xbfc0380;
                 break;
                 case 0x0d: // break (R)
                     ret = 5;
@@ -380,7 +442,7 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
             state->regs[fmt.rd] == 10 || state->regs[fmt.rd] == 12 || state->regs[fmt.rd] == 13 || state->regs[fmt.rd] == 14 || state->regs[fmt.rd] == 15) && state->mode == 1) || state->mode == 0))
                 state->cp0regs[fmt.rd] = state->regs[fmt.rt];
         break;
-        case 0x18: // eret(I?)
+        case 0x18: // eret (I)
             state->exception = 0;
             state->pc = state->cp0regs[14];
             state->cp0regs[14] = 0;
@@ -417,23 +479,30 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
         break;
     }
 
-    // coprocessor 0 parsing
+    // Coprocessor 0 parsing
     if ((state->cp0regs[12] & 0x01) == 0)
     {
         for (int i = 0; i < 8; i++)
             state->interrupts[i] = 0xff;
+    }
+    else
+    {
+        for (int i = 0; i < 8; i++)
+            state->interrupts[i] = 0x00;
     }
 
     state->mode = (state->cp0regs[12] & 0x05) >> 4;
 
     state->cp0regs[9] = count;
 
-    // check timer
+    // Check timer
     if (state->cp0regs[9] == state->cp0regs[11])
     {
         // if timer count == timer compare then interrupt
         interrupt_handler(state, 8);
     }
+
+    // Check for wri
 
     state->regs[0] = 0;
 
