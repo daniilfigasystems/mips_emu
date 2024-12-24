@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h> // POSIX only!
-#include <sys/time.h> // Linux only!
+#include <signal.h> /* POSIX only! */
+#include <sys/time.h> /* Linux only! */
 
 unsigned int ldmem(size_t size, unsigned char *m, unsigned int a);
 void stmem(size_t size, unsigned char *m, unsigned int a, unsigned int d);
@@ -10,7 +10,7 @@ void stmem(size_t size, unsigned char *m, unsigned int a, unsigned int d);
 #define STMEM(s, m, a, d) stmem(s, m, a, d)
 #define CPRINT(c) printf("%c", c)
 #define SPRINT(s) {int i=0; while (mem[i+s]!='\0') {printf("%c", mem[i+s]); i++;}}
-// #define SPRINT(s) printf("%x", s)
+/* #define SPRINT(s) printf("%x", s) */
 #define IPRINT(i) printf("%u", i)
 #define SREAD(b, l) fread((char *)b, 1, l, stdin)
 #define IREAD(i) scanf("%u", &i)
@@ -29,27 +29,27 @@ void hexDump(char *desc, void *addr, int len)
     unsigned char buff[17];
     unsigned char *pc = (unsigned char*)addr;
 
-    // Output description if given.
+    /* Output description if given. */
     if (desc != NULL)
         printf ("%s:\n", desc);
 
-    // Process every byte in the data.
+    /* Process every byte in the data. */
     for (i = 0; i < len; i++) {
-        // Multiple of 16 means new line (with line offset).
+        /* Multiple of 16 means new line (with line offset). */
 
         if ((i % 16) == 0) {
-            // Just don't print ASCII for the zeroth line.
+            /* Just don't print ASCII for the zeroth line. */
             if (i != 0)
                 printf("  %s\n", buff);
 
-            // Output the offset.
+            /* Output the offset. */
             printf("  %04x ", i);
         }
 
-        // Now the hex code for the specific character.
+        /* Now the hex code for the specific character. */
         printf(" %02x", pc[i]);
 
-        // And store a printable ASCII character for later.
+        /* And store a printable ASCII character for later. */
         if ((pc[i] < 0x20) || (pc[i] > 0x7e)) {
             buff[i % 16] = '.';
         } else {
@@ -59,26 +59,28 @@ void hexDump(char *desc, void *addr, int len)
         buff[(i % 16) + 1] = '\0';
     }
 
-    // Pad out last line if not exactly 16 characters.
+    /* Pad out last line if not exactly 16 characters. */
     while ((i % 16) != 0) {
         printf("   ");
         i++;
     }
 
-    // And print the final ASCII bit.
+    /* And print the final ASCII bit. */
     printf("  %s\n", buff);
 }
 
 void print_state()
 {
+    int i;
+
     printf("\n");
 
     printf("--------PROCESSOR REGISTERS--------\n");
-    for (int i = 0; i < 32; i++)
+    for (i = 0; i < 32; i++)
         printf("$%s: %u|0x%x\n", regname[i + 1], state.regs[i], state.regs[i]);
     printf("$%s: %u|0x%x\n\n", regname[0], state.pc, state.pc);
     printf("--------COPROCESSOR 0 REGISTERS--------\n");
-    for (int i = 0; i < 32; i++)
+    for (i = 0; i < 32; i++)
         printf("$%s: %u|0x%x\n", cp0regname[i], state.cp0regs[i], state.cp0regs[i]);
     
     printf("\n--------MEMORY--------\n");
@@ -92,6 +94,8 @@ void exit_handler(int sig)
 
 int main(int argc, char *argv[])
 {
+    int i;
+
     if (argc < 2)
     {
         printf("Usage: %s <input file>\n", argv[0]);
@@ -113,7 +117,7 @@ int main(int argc, char *argv[])
     int size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    mem = (unsigned char *)malloc(0x40000000); // 512MB rom + 512MB ram
+    mem = (unsigned char *)malloc(0x40000000); /* 512MB rom + 512MB ram */
 
     if (mem == NULL)
     {
@@ -126,9 +130,9 @@ int main(int argc, char *argv[])
 
     fclose(fp);
 
-    for (int i = 0; i < 32; i++)
+    for (i = 0; i < 32; i++)
         state.regs[i] = 0;
-    for (int i = 0; i < 32; i++)
+    for (i = 0; i < 32; i++)
         state.cp0regs[i] = 0;
 
     state.pc = 0;
@@ -144,18 +148,18 @@ int main(int argc, char *argv[])
 
     count = tv.tv_usec / 1000;
 
-    for (int i = 0; i < 0x40000000; i++)
+    for (i = 0; i < 0x40000000; i++)
     {
         instruction = loadmemw(mem, state.pc);
 
         if (execute(&state, instruction, mem, count) == 5)
             break;
 
-        // synchronize timer
+        /* synchronize timer */
         count = tv.tv_usec / 1000;
-        // printf("%x\n", instruction);
-        // printf("$%x: %x%x%x%x\n", state.pc, mem[state.pc], mem[state.pc + 1], mem[state.pc + 2], mem[state.pc + 3]);
-        // printf("%x\n", execute(&state, instruction, mem));
+        /* printf("%x\n", instruction); */
+        /* printf("$%x: %x%x%x%x\n", state.pc, mem[state.pc], mem[state.pc + 1], mem[state.pc + 2], mem[state.pc + 3]); */
+        /* printf("%x\n", execute(&state, instruction, mem)); */
     }
 
     print_state();
