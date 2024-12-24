@@ -256,15 +256,6 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
                     if (state->regs[fmt.rt] != 0)
                         state->regs[fmt.rd] = state->regs[fmt.rs];
                 break;
-                case 0x22: /* sub (R) */
-                    if ((state->regs[fmt.rs] > 0 && state->regs[fmt.rt] < 0 && (state->regs[fmt.rs] + state->regs[fmt.rt]) < 0) || 
-                    (state->regs[fmt.rs] < 0 && state->regs[fmt.rt] > 0 && (state->regs[fmt.rs] + state->regs[fmt.rt]) > 0))
-                        state->exception = 1;
-                    state->regs[fmt.rd] = state->regs[fmt.rs] - state->regs[fmt.rt];
-                break;
-                case 0x23: /* subu (R) */
-                    state->regs[fmt.rd] = (unsigned)state->regs[fmt.rs] - (unsigned)state->regs[fmt.rt];
-                break;
                 case 0x0c: /* syscall (R) */
                     switch (state->regs[2])
                     {
@@ -330,6 +321,15 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
                 break;
                 case 0x21: /* addu (R) */
                     state->regs[fmt.rd] = (unsigned)state->regs[fmt.rs] + (unsigned)state->regs[fmt.rt];
+                break;
+                case 0x22: /* sub (R) */
+                    if ((state->regs[fmt.rs] > 0 && state->regs[fmt.rt] < 0 && (state->regs[fmt.rs] + state->regs[fmt.rt]) < 0) || 
+                    (state->regs[fmt.rs] < 0 && state->regs[fmt.rt] > 0 && (state->regs[fmt.rs] + state->regs[fmt.rt]) > 0))
+                        state->exception = 1;
+                    state->regs[fmt.rd] = state->regs[fmt.rs] - state->regs[fmt.rt];
+                break;
+                case 0x23: /* subu (R) */
+                    state->regs[fmt.rd] = (unsigned)state->regs[fmt.rs] - (unsigned)state->regs[fmt.rt];
                 break;
                 case 0x24: /* and (R) */
                     state->regs[fmt.rd] = state->regs[fmt.rs] & state->regs[fmt.rt];
