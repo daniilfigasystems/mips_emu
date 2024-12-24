@@ -206,7 +206,7 @@ void interrupt_handler(MIPS_state *state, int interrupt, int exception)
     else
     {
         /* clear previous exception */
-        state->cp0regs[14] &= 31 << 1;
+        state->cp0regs[13] &= 31 << 1;
         state->cp0regs[13] |= (exception & 0x5) << 1;
     }
 
