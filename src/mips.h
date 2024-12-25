@@ -440,6 +440,7 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
         break;
         case 0x0f: /* lui (I) */
             state->regs[ifmt.rt] = ifmt.immediate << 16;
+            state->regs[ifmt.rt] &= 0xffff;
         break;
         case 0x10: /* mfc0/mtc0 (R) */
             if (state->regs[fmt.rs] == 0) /* mfc0 */
