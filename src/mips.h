@@ -395,7 +395,7 @@ int execute(MIPS_state *state, unsigned int instruction, unsigned char *mem, uns
             }
         break;
         case 0x02: /* j (J) */
-            state->pc = jfmt.address - 4;
+            state->pc = (jfmt.address << 2) | ((state->pc & 0xf) << 28);
         break;
         case 0x03: /* jal (J) */
             state->pc = jfmt.address - 4;
