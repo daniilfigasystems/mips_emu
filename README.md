@@ -9,6 +9,7 @@ Interrupts (note: pc is set to 0x10000180 (due to malloc 4g limit) eret is inacc
 Coprocessor 0 <br />
 Almost all instructions <br />
 MIPS I/II (some instructions from MIPS II) <br />
+MMIO (starts from 0x3e000000) <br />
 Basic UART 8550 <br />
 Portable header only C code <br />
 
