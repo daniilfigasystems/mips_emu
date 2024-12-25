@@ -1,3 +1,5 @@
+# UART print hello example
+
 li $t1, 0x1000000
 li $t2, 'h'
 
