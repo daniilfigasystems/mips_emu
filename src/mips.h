@@ -1,4 +1,5 @@
 /* MIPS Emulator */
+/* Copyright 2024 Daniil Dunaef */
 
 #ifndef MIPS_EMU
 #define MIPS_EMU
